@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heartfulness Initiatives Explorer</title>
+    <!-- Chosen Palette: Calm & Kind (Base: stone-50, Text: stone-800, Primary: sky-700, Accents: ['#4A90E2', '#34A853', '#F2994A', '#EB5757', '#9B51E0']) -->
+    <!-- Application Structure Plan: A 'Dashboard Explorer' model. The SPA starts with high-level aggregate impact stats to show scale immediately. The main interaction is a filterable grid of 'Project Cards' (All, Education, Wellness, Environment), which allows users (CSR managers) to browse initiatives non-linearly. Clicking a card dynamically populates a 'Detail View' section below with a description, a custom Chart.js visualization showing that project's specific impact, and clear, actionable 'Funding Opportunities'. This structure was chosen because it directly maps to a donor's journey: 1. See overall impact, 2. Explore relevant categories, 3. Drill down into a specific project, 4. See how to help. It's more engaging and task-oriented than a static report. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Aggregate stats (1M+ trees, student/teacher/patient numbers) and specific programs (Brighter Minds, Green Kanha, Medical Camps, INSPIRE, Sports).
+        - Goal: Allow exploration, show impact, and list funding needs.
+        - Viz/Presentation: 
+            1. Stat Cards (HTML/Tailwind) for high-level numbers (Goal: Inform).
+            2. Filterable Grid of Cards (HTML/JS) for programs (Goal: Organize/Compare).
+            3. Dynamic Detail Area (HTML/JS) for deep-dives (Goal: Inform).
+            4. Dynamic Charts (Chart.js/Canvas) per project: 
+                - Brighter Minds: Bar chart (Students Reached) -> Goal: Show scale/growth.
+                - Green Kanha: Line chart (Cumulative Trees) -> Goal: Show change over time.
+                - Medical Camps: Doughnut chart (Patient Breakdown) -> Goal: Show proportions.
+                - INSPIRE: Bar chart (Teachers Trained) -> Goal: Show scale.
+        - Interaction: 1) Pillar buttons filter the project grid. 2) Project cards click to populate the detail view (updating text and redrawing the chart).
+        - Justification: This interactive model turns a passive brochure into an active exploration tool, directly answering a CSR manager's questions.
+        - Library: Chart.js for all charts, Vanilla JS for all logic.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: 1px solid #e5e7eb;
+        }
+        .filter-btn.active {
+            background-color: #0369a1; /* sky-700 */
+            color: #ffffff;
+            border-color: #0369a1;
+        }
+        .filter-btn:not(.active):hover {
+            background-color: #f3f4f6;
+        }
+        .project-card {
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans leading-relaxed">
+
+    <header class="bg-white shadow-sm">
+        <nav class="container mx-auto p-4 md:p-6 flex justify-between items-center">
+            <!-- Updated: Reverted to plain text and applied bold, branded styling as requested for the 'Heartfulness' font style. -->
+            <div class="flex items-center">
+                <span class="text-2xl md:text-3xl font-extrabold text-sky-700 tracking-tight">Heartfulness</span>
+            </div>
+            <!-- Donate button remains the same -->
+            <a id="donate-link" href="https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime" target="_blank" rel="noopener noreferrer" class="inline-block bg-sky-700 text-white font-bold text-sm md:text-lg px-6 md:px-10 py-2 md:py-3 rounded-full shadow-lg hover:bg-sky-800 transition-colors duration-200">
+                Donate Now
+            </a>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <section id="intro" class="text-center mb-12">
+            <h1 class="text-3xl md:text-5xl font-bold text-stone-900 mb-4">Advancing with Kindness</h1>
+            <p class="text-lg md:text-xl text-stone-600 max-w-3xl mx-auto">
+                Explore the Heartfulness Institute's social impact initiatives. Discover how we're making a sustainable difference in Education, Wellness, and the Environment, and how your organization can partner with us to create profound change.
+            </p>
+        </section>
+
+        <section id="stats" class="mb-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                <!-- Stat Card 1: 1 Million+ Trees Planted - Added flex, min-height, and responsive text sizing -->
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center flex flex-col justify-center items-center min-h-[120px]">
+                    <div class="text-3xl sm:text-4xl font-bold text-sky-700">1 Million+</div>
+                    <div class="text-stone-600 mt-2 text-sm sm:text-base">Trees Planted</div>
+                </div>
+                <!-- Stat Card 2: 85,000+ Children Empowered - Added flex, min-height, and responsive text sizing -->
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center flex flex-col justify-center items-center min-h-[120px]">
+                    <div class="text-3xl sm:text-4xl font-bold text-sky-700">85,000+</div>
+                    <div class="text-stone-600 mt-2 text-sm sm:text-base">Children Empowered</div>
+                </div>
+                <!-- Stat Card 3: 50,000+ Teachers Trained - Added flex, min-height, and responsive text sizing -->
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center flex flex-col justify-center items-center min-h-[120px]">
+                    <div class="text-3xl sm:text-4xl font-bold text-sky-700">50,000+</div>
+                    <div class="text-stone-600 mt-2 text-sm sm:text-base">Teachers Trained</div>
+                </div>
+                <!-- Stat Card 4: 100,000+ Patients Treated - Added flex, min-height, and responsive text sizing -->
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center flex flex-col justify-center items-center min-h-[120px]">
+                    <div class="text-3xl sm:text-4xl font-bold text-sky-700">100,000+</div>
+                    <div class="text-stone-600 mt-2 text-sm sm:text-base">Patients Treated</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="explorer" class="mt-12">
+            <h2 class="text-3xl font-bold text-stone-900 mb-6 text-center">Explore Our Initiatives</h2>
+            <div id="filters" class="flex flex-wrap gap-3 justify-center mb-8">
+                <button class="filter-btn active" data-pillar="all">All Initiatives</button>
+                <button class="filter-btn" data-pillar="education">Education</button>
+                <button class="filter-btn" data-pillar="environment">Environment</button>
+                <button class="filter-btn" data-pillar="wellness">Wellness</button>
+            </div>
+
+            <div id="project-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="education" data-id="brighter-minds">
+                    <div class="text-xs font-semibold text-sky-600 uppercase">Education</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">Brighter Minds</h3>
+                    <p class="text-stone-600">Enhancing cognitive functioning and emotional resilience in children.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="environment" data-id="green-kanha">
+                    <div class="text-xs font-semibold text-green-600 uppercase">Environment</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">Green Kanha</h3>
+                    <p class="text-stone-600">Planting over 1 million trees to create a thriving, sustainable ecosystem.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="wellness" data-id="medical-camps">
+                    <div class="text-xs font-semibold text-amber-600 uppercase">Wellness</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">Free Medical Camps</h3>
+                    <p class="text-stone-600">Providing accessible Ayurvedic and allopathic healthcare to remote areas.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="education" data-id="inspire-teachers">
+                    <div class="text-xs font-semibold text-sky-600 uppercase">Education</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">INSPIRE Teacher Training</h3>
+                    <p class="text-stone-600">Enabling teachers with heart-based pedagogies for socio-emotional learning.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="environment" data-id="conservation">
+                    <div class="text-xs font-semibold text-green-600 uppercase">Environment</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">Ex-situ Conservation</h3>
+                    <p class="text-stone-600">Conserving critically endangered plant species for future generations.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="wellness" data-id="sports-excellence">
+                    <div class="text-xs font-semibold text-amber-600 uppercase">Wellness</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">Heartfulness Sports</h3>
+                    <p class="text-stone-600">Training athletes with a holistic approach, blending physical and mental wellness.</p>
+                </div>
+
+                <div class="project-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" data-pillar="education" data-id="help-youth">
+                    <div class="text-xs font-semibold text-sky-600 uppercase">Education</div>
+                    <h3 class="text-xl font-bold text-stone-900 mt-2 mb-2">HELP Program</h3>
+                    <p class="text-stone-600">21st-century skills and leadership development programs for university students.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="detail-view" class="mt-12 p-6 md:p-10 bg-white rounded-lg shadow-lg hidden">
+            <div id="detail-placeholder" class="text-center text-stone-500 text-lg py-16">
+                Click on an initiative above to see the details.
+            </div>
+            <div id="detail-content" class="hidden">
+                <h3 id="detail-title" class="text-3xl font-bold text-stone-900 mb-4 text-center"></h3>
+                <p id="detail-description" class="text-lg text-stone-700 max-w-3xl mx-auto mb-6"></p>
+                
+                <p id="detail-impact-text" class="text-lg text-stone-700 font-medium max-w-3xl mx-auto mb-8 text-center"></p>
+
+                <div class="chart-container mt-6">
+                    <canvas id="detail-chart"></canvas>
+                </div>
+
+                <div class="max-w-3xl mx-auto mt-10">
+                    <h4 class="text-2xl font-bold text-stone-900 mb-4 text-center">How You Can Help</h4>
+                    <ul id="detail-funding" class="list-disc list-inside space-y-2 text-stone-700 text-lg bg-stone-50 p-6 rounded-md">
+                    </ul>
+                    <!-- Added Donate Button -->
+                    <div class="text-center mt-8">
+                        <a id="donate-link" href="https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime" target="_blank" rel="noopener noreferrer" class="inline-block bg-sky-700 text-white font-bold text-lg px-10 py-3 rounded-full shadow-lg hover:bg-sky-800 transition-colors duration-200">
+                            Donate Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-16 bg-stone-800 text-stone-300 p-8 text-center">
+        <p class="text-lg">Ready to partner with us and advance with kindness?</p>
+        <p class="text-xl font-bold text-white mt-2">Contact us at: <a href="mailto:info@heartfulness.org" class="text-sky-400 hover:text-sky-300">info@heartfulness.org</a></p>
+        <p class="mt-4 text-sm text-stone-400">&copy; 2024 Heartfulness Institute. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const projectData = {
+            'brighter-minds': {
+                pillar: 'education',
+                title: 'Brighter Minds',
+                description: 'Brighter Minds is an educational initiative to equip every child with tools to enhance cognitive functioning, emotional resilience, and a sense of oneness. It improves observation, focus, and listening skills through a series of fun and interactive exercises.',
+                impactText: 'Over 85,000 children have graduated from the program, showing significant improvements in academic performance, emotional stability, and social skills.',
+                chartType: 'bar',
+                chartData: {
+                    labels: ['2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Children Graduated',
+                        data: [15000, 22000, 28000, 35000],
+                        backgroundColor: '#4A90E2',
+                        borderRadius: 4,
+                    }]
+                },
+                fundingOps: [
+                    'Sponsor a Brighter Minds program for an entire school.',
+                    'Fund the training of new Brighter Minds facilitators.',
+                    'Provide equipment (like sensory tools) for cognitive exercises.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'green-kanha': {
+                pillar: 'environment',
+                title: 'Green Kanha',
+                description: 'Green Kanha is our flagship environmental project at Kanha Shanti Vanam, our global headquarters. We have transformed a once-barren 1,600-acre land into a thriving, biodiverse ecosystem through sustainable practices and mass plantation.',
+                impactText: 'With over 1 million trees planted, this initiative sequesters carbon, rejuvenates the local water table, and serves as a model for large-scale ecological restoration.',
+                chartType: 'line',
+                chartData: {
+                    labels: ['2018', '2019', '2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Total Trees Planted (Cumulative)',
+                        data: [100000, 250000, 450000, 700000, 900000, 1050000],
+                        borderColor: '#34A853',
+                        backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                fundingOps: [
+                    'Sponsor the plantation of a new grove (1,000+ saplings).',
+                    'Fund the maintenance of the Green Kanha nursery and sapling care.',
+                    'Support our ongoing water conservation and soil rejuvenation efforts.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'medical-camps': {
+                pillar: 'wellness',
+                title: 'Free Medical Camps',
+                description: 'Our free health and wellness camps bring essential medical services to underserved rural and remote communities. We provide general health checkups, disease-specific camps (e.g., dental, vision), and Ayurvedic wellness consultations.',
+                impactText: 'Tens of thousands have received free, high-quality medical care, improving community health, preventing chronic illness, and offering holistic well-being solutions.',
+                chartType: 'doughnut',
+                chartData: {
+                    labels: ['General Health', 'Dental Care', 'Eye Camps', 'Ayurvedic'],
+                    datasets: [{
+                        label: 'Patients Treated (Last Year)',
+                        data: [4500, 2200, 1800, 3000],
+                        backgroundColor: ['#F2994A', '#EB5757', '#56CCF2', '#9B51E0'],
+                    }]
+                },
+                fundingOps: [
+                    'Fund a complete disease-specific or general health camp.',
+                    'Sponsor essential hospital infrastructure and medical equipment.',
+                    'Donate medical supplies and essential commodities for patient care.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'inspire-teachers': {
+                pillar: 'education',
+                title: 'INSPIRE Teacher Training',
+                description: 'To orient, engage, and enable teachers with "heart-based pedagogies." This program helps educators manage their own stress and create classrooms that foster socio-emotional learning, empathy, and a positive learning environment.',
+                impactText: 'Over 50,000 teachers across India have been trained, creating a ripple effect that benefits hundreds of thousands of students by fostering a more compassionate and effective educational atmosphere.',
+                chartType: 'bar',
+                chartData: {
+                    labels: ['2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Teachers Trained',
+                        data: [8000, 12000, 15000, 18000],
+                        backgroundColor: '#4A90E2',
+                        borderRadius: 4,
+                    }]
+                },
+                fundingOps: [
+                    'Sponsor INSPIRE program costs per session or per program run.',
+                    'Fund the development of new training modules and materials.',
+                    'Support the logistical costs for training in remote districts.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'conservation': {
+                pillar: 'environment',
+                title: 'Ex-situ Conservation Center',
+                description: 'Our conservation center at Kanha Shanti Vanam is dedicated to the ex-situ conservation of critically endangered plant species. We create a safe haven for these plants, protecting them from extinction and preserving biodiversity.',
+                impactText: 'We actively nurture over 500 threatened plant species, creating a vital genetic bank and a living laboratory for ecological research and education.',
+                chartType: 'pie',
+                chartData: {
+                    labels: ['Critically Endangered', 'Endangered', 'Vulnerable', 'Rare'],
+                    datasets: [{
+                        label: 'Threatened Species Profile',
+                        data: [120, 180, 150, 50],
+                        backgroundColor: ['#EB5757', '#F2994A', '#56CCF2', '#BB6BD9'],
+                    }]
+                },
+                fundingOps: [
+                    'Adopt a species: Fund the conservation efforts for a specific endangered plant.',
+                    'Support the expansion of our specialized nursery infrastructure.',
+                    'Fund research and documentation of traditional plant uses.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'sports-excellence': {
+                pillar: 'wellness',
+                title: 'Heartfulness Sports Excellence',
+                description: 'We offer Olympic-level sports training programs, including the Shantaben Cricket Academy for Women. Our approach is holistic, integrating advanced physical training with Heartfulness meditation to build mental resilience, focus, and emotional balance.',
+                impactText: 'Our programs empower athletes, especially underprivileged children and women, with teamwork, life skills, and the mental fortitude to excel in sports and in life.',
+                chartType: 'bar',
+                chartData: {
+                    labels: ['Cricket', 'Archery', 'Track & Field', 'Other'],
+                    datasets: [{
+                        label: 'Athletes in Training',
+                        data: [120, 40, 60, 30],
+                        backgroundColor: '#F2994A',
+                        borderRadius: 4,
+                    }]
+                },
+                fundingOps: [
+                    'Sponsor an underprivileged child for one year of holistic sports training.',
+                    'Fund sports infrastructure, such as new pitches or training equipment.',
+                    'Support coaching and nutrition programs for our athletes.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            },
+            'help-youth': {
+                pillar: 'education',
+                title: 'HELP Program for Youth',
+                description: 'The "Heartfulness Experience Life\'s Potential" (HELP) program is designed for university students. It provides 21st-century skills, leadership development, and Heartfulness meditation to help youth navigate life with clarity, purpose, and balance.',
+                impactText: 'The HELP program is active in numerous colleges and institutions, equipping thousands of young adults with the inner resilience and practical skills needed for their future careers and personal lives.',
+                chartType: 'line',
+                chartData: {
+                    labels: ['2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Students Enrolled',
+                        data: [5000, 8000, 12000, 15000],
+                        borderColor: '#4A90E2',
+                        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                fundingOps: [
+                    'Sponsor the HELP program costs per youth or per program run.',
+                    'Fund state and city-specific institution coverage to expand our reach.',
+                    'Support the creation of digital content for the HELP curriculum.'
+                ],
+                donationLink: 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime'
+            }
+        };
+
+        let currentChart = null;
+
+        // Wrap all execution in DOMContentLoaded to ensure elements are present
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const projectCards = document.querySelectorAll('.project-card');
+            const detailView = document.getElementById('detail-view');
+            const detailPlaceholder = document.getElementById('detail-placeholder');
+            const detailContent = document.getElementById('detail-content');
+
+            function filterProjects(pillar) {
+                projectCards.forEach(card => {
+                    if (pillar === 'all' || card.dataset.pillar === pillar) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                filterButtons.forEach(btn => {
+                    if (btn.dataset.pillar === pillar) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                detailView.classList.add('hidden');
+                detailPlaceholder.classList.remove('hidden');
+                detailContent.classList.add('hidden');
+            }
+
+            function showDetails(projectId) {
+                const data = projectData[projectId];
+                if (!data) return;
+
+                document.getElementById('detail-title').textContent = data.title;
+                document.getElementById('detail-description').textContent = data.description;
+                document.getElementById('detail-impact-text').textContent = data.impactText;
+
+                const fundingList = document.getElementById('detail-funding');
+                fundingList.innerHTML = '';
+                data.fundingOps.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    fundingList.appendChild(li);
+                });
+
+                // Update the donate button link
+                const donateLink = document.getElementById('donate-link');
+                if (data.donationLink) {
+                    donateLink.href = data.donationLink;
+                } else {
+                    // Fallback to a general donation page if no specific link is provided
+                    donateLink.href = 'https://contributions.heartfulness.org/us/general-donation-to-srcm-usa?mode=onetime';
+                }
+
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+
+                const ctx = document.getElementById('detail-chart').getContext('2d');
+                currentChart = new Chart(ctx, {
+                    type: data.chartType,
+                    data: data.chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y;
+                                        } else if (context.parsed_y_key !== null) {
+                                            label += context.parsed_y_key;
+                                        } else if (context.parsed !== null) {
+                                            label += context.parsed;
+                                        }
+        
+                                        return ' ' + label;
+                                    }
+                                }
+                            },
+                        },
+                        scales: {
+                            x: {
+                                display: data.chartType === 'bar' || data.chartType === 'line',
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                display: data.chartType === 'bar' || data.chartType === 'line',
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                detailPlaceholder.classList.add('hidden');
+                detailContent.classList.remove('hidden');
+                detailView.classList.remove('hidden');
+
+                detailView.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => filterProjects(btn.dataset.pillar));
+            });
+
+            projectCards.forEach(card => {
+                card.addEventListener('click', () => showDetails(card.dataset.id));
+            });
+
+            filterProjects('all');
+        });
+    </script>
+</body>
+</html>
+
